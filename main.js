@@ -113,36 +113,43 @@ class App {
             this.showLoader('Loading model...');
             const gltfLoader = new GLTFLoader(manager);
             gltfLoader.load(modelFile, async (gltf) => {
-                this.showLoader('Analyzing animations with AI...');
+                try { // Add try/catch for post-load processing
+                    this.showLoader('Analyzing animations with AI...');
 
-                const model = gltf.scene;
-                model.traverse(c => {
-                    c.castShadow = true;
-                });
+                    const model = gltf.scene;
+                    model.traverse(c => {
+                        c.castShadow = true;
+                    });
 
-                const mixer = new THREE.AnimationMixer(model);
-                const clipNames = gltf.animations.map(clip => clip.name);
-                const mappedAnimations = await this.mapAnimationsAI(clipNames, gltf.animations, mixer);
+                    const mixer = new THREE.AnimationMixer(model);
+                    const clipNames = gltf.animations.map(clip => clip.name);
+                    const mappedAnimations = await this.mapAnimationsAI(clipNames, gltf.animations, mixer);
 
-                this.characterController = new CharacterController(model, mixer, mappedAnimations, this.camera, this.controls);
-                this.scene.add(model);
+                    this.characterController = new CharacterController(model, mixer, mappedAnimations, this.camera, this.controls);
+                    this.scene.add(model);
 
-                this.setupMobileControls();
-                this.controlsElement.classList.remove('hidden');
-                document.getElementById('jump-button').onclick = () => this.characterController.jump();
+                    this.setupMobileControls();
+                    this.controlsElement.classList.remove('hidden');
+                    document.getElementById('jump-button').onclick = () => this.characterController.jump();
 
-                this.hideLoader();
-                objectURLs.forEach(url => URL.revokeObjectURL(url)); // Clean up
+                    this.hideLoader();
+                    objectURLs.forEach(url => URL.revokeObjectURL(url)); // Clean up
+                } catch(error) {
+                    console.error("Error processing loaded model:", error);
+                    this.showToast('Error processing model.', error);
+                    this.hideLoader();
+                    this.uploadPrompt.classList.remove('hidden');
+                }
             }, undefined, (error) => {
                 console.error(error);
-                alert('Error loading model. Check console for details.');
+                this.showToast('Error loading model.', error);
                 this.hideLoader();
                 this.uploadPrompt.classList.remove('hidden');
             });
 
         } catch (error) {
             console.error(error);
-            alert('Error processing zip file. Please ensure it is a valid zip containing a gltf/glb model.');
+            this.showToast('Error processing zip file.', error);
             this.hideLoader();
             this.uploadPrompt.classList.remove('hidden');
         }
@@ -196,6 +203,10 @@ class App {
             actions.run = actions.walk;
         }
 
+        if (!actions.idle) {
+            throw new Error("AI could not map an 'idle' animation. Character cannot be loaded.");
+        }
+
         return actions;
     }
 
@@ -223,6 +234,50 @@ class App {
             this.joystick.forward = 0;
             this.joystick.turn = 0;
         });
+    }
+
+    showToast(message, error = null) {
+        const toastContainer = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+    
+        const messageElement = document.createElement('p');
+        messageElement.className = 'toast-message';
+        messageElement.textContent = message;
+        toast.appendChild(messageElement);
+    
+        if (error) {
+            const copyButton = document.createElement('button');
+            copyButton.className = 'toast-copy-button';
+            copyButton.textContent = 'Copy Details';
+            copyButton.onclick = () => {
+                const errorDetails = error.stack || error.toString();
+                navigator.clipboard.writeText(errorDetails)
+                    .then(() => {
+                        copyButton.textContent = 'Copied!';
+                        setTimeout(() => copyButton.textContent = 'Copy Details', 2000);
+                    })
+                    .catch(err => {
+                        console.error('Failed to copy error details:', err);
+                        copyButton.textContent = 'Copy Failed';
+                    });
+            };
+            toast.appendChild(copyButton);
+        }
+    
+        toastContainer.appendChild(toast);
+    
+        // Trigger the animation
+        setTimeout(() => {
+            toast.classList.add('show');
+        }, 10);
+    
+        // Auto-hide
+        setTimeout(() => {
+            toast.classList.remove('show');
+            // Remove element after transition finishes
+            toast.addEventListener('transitionend', () => toast.remove());
+        }, 10000); // 10 seconds
     }
 
     showLoader(text) {
