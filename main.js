@@ -14,6 +14,16 @@ class App {
 
         this.init();
         this.setupEventListeners();
+
+        // Global error handlers to surface callstacks in a toast
+        window.addEventListener('error', (e) => {
+            console.error('Unhandled Error:', e.error || e.message);
+            this.showToast('An error occurred.', e.error || new Error(e.message));
+        });
+        window.addEventListener('unhandledrejection', (e) => {
+            console.error('Unhandled Promise Rejection:', e.reason);
+            this.showToast('An async error occurred.', e.reason instanceof Error ? e.reason : new Error(String(e.reason)));
+        });
     }
 
     init() {
@@ -55,6 +65,8 @@ class App {
         this.clock = new THREE.Clock();
         this.characterController = null;
         this.keys = {};
+        // Ensure joystick is always defined to avoid undefined property access
+        this.joystick = { forward: 0, turn: 0 };
 
         this.animate = this.animate.bind(this);
         requestAnimationFrame(this.animate);
@@ -359,7 +371,7 @@ class App {
             if (this.keys[' ']) this.characterController.jump();
 
             // Mobile/Joystick controls (override keyboard if active)
-            if(Math.abs(this.joystick.forward) > 0.1 || Math.abs(this.joystick.turn) > 0.1){
+            if (this.joystick && (Math.abs(this.joystick.forward) > 0.1 || Math.abs(this.joystick.turn) > 0.1)){
                 move.forward = -this.joystick.forward;
                 move.turn = this.joystick.turn;
             }
