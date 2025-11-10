@@ -124,23 +124,39 @@ class App {
                 // The 'url' can be a full path or relative. It might also be URI encoded.
                 const decodedUrl = decodeURIComponent(url);
 
-                // Construct the full path within the zip.
-                // modelPath already has a trailing slash if it's in a subdirectory.
+                // Try multiple resolution strategies
+                const pathsToTry = [];
+
+                // Strategy 1: Relative to model path
                 const resolvedPath = modelPath + decodedUrl;
+                pathsToTry.push(resolvedPath.replace(/\\/g, '/').toLowerCase());
 
-                // Normalize path separators to handle cases where the GLTF uses '\'
-                const normalizedPath = resolvedPath.replace(/\\/g, '/').toLowerCase();
+                // Strategy 2: Direct path (no model path prefix)
+                pathsToTry.push(decodedUrl.replace(/\\/g, '/').toLowerCase());
 
-                const blobUrl = fileMap.get(normalizedPath);
+                // Strategy 3: Just the filename (in case it's in the root or same folder)
+                const justFilename = decodedUrl.split('/').pop().split('\\').pop();
+                pathsToTry.push(justFilename.toLowerCase());
 
-                if (blobUrl) {
-                    return blobUrl;
+                // Strategy 4: Check if the file exists anywhere in the zip by filename
+                for (const path of pathsToTry) {
+                    const blobUrl = fileMap.get(path);
+                    if (blobUrl) {
+                        console.log(`Resolved ${url} to ${path}`);
+                        return blobUrl;
+                    }
                 }
 
-                // Fallback for cases where the path might not need the modelPath prefix
-                // (e.g., if the GLTF uses absolute paths within the zip)
-                const fallbackPath = decodedUrl.replace(/\\/g, '/').toLowerCase();
-                return fileMap.get(fallbackPath) || url;
+                // Strategy 5: Search through all files for a matching filename
+                for (const [key, value] of fileMap.entries()) {
+                    if (key.endsWith('/' + justFilename) || key === justFilename) {
+                        console.log(`Found ${url} at ${key}`);
+                        return value;
+                    }
+                }
+
+                console.warn(`Could not resolve ${url}, tried:`, pathsToTry);
+                return url;
             });
 
             this.showLoader('Loading model...');
