@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Animated Model Viewer</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://esm.sh/three@0.166.1",
+            "three/addons/": "https://esm.sh/three@0.166.1/examples/jsm/",
+            "jszip": "https://esm.sh/jszip@3.10.1",
+            "nipplejs": "https://esm.sh/nipplejs@0.10.1"
+        }
+    }
+    </script>
+</head>
+<body>
+    <div id="container">
+        <canvas id="c"></canvas>
+    </div>
+    <div id="loader" class="hidden">
+        <div class="spinner"></div>
+        <p id="loader-text">Loading...</p>
+    </div>
+    <div id="ui-container">
+        <div id="upload-prompt">
+            <h1>AI Animated Model Viewer</h1>
+            <p>Upload a .zip file containing a rigged 3D model (.gltf or .glb) with its animations.</p>
+            <button id="upload-button">Upload ZIP</button>
+            <input type="file" id="file-input" accept=".zip" style="display: none;">
+        </div>
+        <div id="controls" class="hidden">
+             <div id="joystick-zone"></div>
+             <button id="jump-button">Jump</button>
+        </div>
+    </div>
+    <script type="module" src="main.js"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
+
