@@ -103,11 +103,26 @@ class App {
                 throw new Error('No .gltf or .glb file found in the zip.');
             }
 
+            // Find the path of the model file to resolve relative assets
+            let modelPath = '';
+            for (const [key, value] of fileMap.entries()) {
+                if (value === modelFile) {
+                    const lastSlash = key.lastIndexOf('/');
+                    if (lastSlash !== -1) {
+                        modelPath = key.substring(0, lastSlash + 1);
+                    }
+                    break;
+                }
+            }
+
             // Setup a custom loading manager to resolve local blob URLs
             const manager = new THREE.LoadingManager();
             manager.setURLModifier((url) => {
-                const normalizedUrl = url.replace(modelFile.substring(0, modelFile.lastIndexOf('/') + 1), '').toLowerCase();
-                return fileMap.get(normalizedUrl) || url;
+                // url is the relative path from the GLTF file
+                // We construct the full path within the zip and look it up
+                const resolvedPath = modelPath + url;
+                const normalizedPath = resolvedPath.toLowerCase();
+                return fileMap.get(normalizedPath) || url;
             });
 
             this.showLoader('Loading model...');
