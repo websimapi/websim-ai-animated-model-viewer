@@ -130,45 +130,33 @@ class App {
             // Setup a custom loading manager to resolve local blob URLs
             const manager = new THREE.LoadingManager();
             manager.setURLModifier((url) => {
-                // url is the relative path from the GLTF file
-                // We construct the full path within the zip and look it up
-
-                // The 'url' can be a full path or relative. It might also be URI encoded.
+                // url is the relative path from the GLTF file.
                 const decodedUrl = decodeURIComponent(url);
-
-                // Try multiple resolution strategies
-                const pathsToTry = [];
-
-                // Strategy 1: Relative to model path
-                const resolvedPath = modelPath + decodedUrl;
-                pathsToTry.push(resolvedPath.replace(/\\/g, '/').toLowerCase());
-
-                // Strategy 2: Direct path (no model path prefix)
-                pathsToTry.push(decodedUrl.replace(/\\/g, '/').toLowerCase());
-
-                // Strategy 3: Just the filename (in case it's in the root or same folder)
                 const justFilename = decodedUrl.split('/').pop().split('\\').pop();
-                pathsToTry.push(justFilename.toLowerCase());
 
-                // Strategy 4: Check if the file exists anywhere in the zip by filename
-                for (const path of pathsToTry) {
-                    const blobUrl = fileMap.get(path);
-                    if (blobUrl) {
-                        console.log(`Resolved ${url} to ${path}`);
-                        return blobUrl;
+                // Strategy 1: Resolve relative to the model's path.
+                // This is the most common and correct way.
+                if (modelPath) {
+                    const relativePath = (modelPath + decodedUrl).toLowerCase();
+                    if (fileMap.has(relativePath)) {
+                        console.log(`Resolved ${url} to ${relativePath}`);
+                        return fileMap.get(relativePath);
                     }
                 }
 
-                // Strategy 5: Search through all files for a matching filename
-                for (const [key, value] of fileMap.entries()) {
-                    if (key.endsWith('/' + justFilename) || key === justFilename) {
-                        console.log(`Found ${url} at ${key}`);
-                        return value;
+                // Strategy 2: If relative path fails, search for the filename anywhere.
+                // This helps with oddly structured ZIPs.
+                const filenameLower = justFilename.toLowerCase();
+                for (const [zipPath, blobUrl] of fileMap.entries()) {
+                    // Check if the path in the zip ends with the filename we need.
+                    if (zipPath.endsWith('/' + filenameLower) || zipPath === filenameLower) {
+                         console.log(`Found ${url} at fallback path: ${zipPath}`);
+                         return blobUrl;
                     }
                 }
-
-                console.warn(`Could not resolve ${url}, tried:`, pathsToTry);
-                return url;
+                
+                console.warn(`Could not resolve asset: ${url}. Returning original URL.`);
+                return url; // Fallback to original URL
             });
 
             this.showLoader('Loading model...');
