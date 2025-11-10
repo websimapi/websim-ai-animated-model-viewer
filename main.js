@@ -120,9 +120,27 @@ class App {
             manager.setURLModifier((url) => {
                 // url is the relative path from the GLTF file
                 // We construct the full path within the zip and look it up
-                const resolvedPath = modelPath + url;
-                const normalizedPath = resolvedPath.toLowerCase();
-                return fileMap.get(normalizedPath) || url;
+
+                // The 'url' can be a full path or relative. It might also be URI encoded.
+                const decodedUrl = decodeURIComponent(url);
+
+                // Construct the full path within the zip.
+                // modelPath already has a trailing slash if it's in a subdirectory.
+                const resolvedPath = modelPath + decodedUrl;
+
+                // Normalize path separators to handle cases where the GLTF uses '\'
+                const normalizedPath = resolvedPath.replace(/\\/g, '/').toLowerCase();
+
+                const blobUrl = fileMap.get(normalizedPath);
+
+                if (blobUrl) {
+                    return blobUrl;
+                }
+
+                // Fallback for cases where the path might not need the modelPath prefix
+                // (e.g., if the GLTF uses absolute paths within the zip)
+                const fallbackPath = decodedUrl.replace(/\\/g, '/').toLowerCase();
+                return fileMap.get(fallbackPath) || url;
             });
 
             this.showLoader('Loading model...');
